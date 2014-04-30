@@ -50,13 +50,6 @@ if [ -z $APP_NAME ]; then
   exit;
 fi
 
-if [ -f "content/pdfjs/build/pdf.js" ]; then
-  true;
-else
-  echo "Please run make from content/pdfjs";
-  exit 0
-fi
-
 ROOT_DIR=`pwd`
 TMP_DIR=build
 
