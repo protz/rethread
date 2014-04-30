@@ -112,7 +112,7 @@ MonkeyPatch.prototype = {
         myItem.setAttribute("label", strings.get("rethread"));
         myItem.setAttribute("id", "rethread-menuitem");
         myItem.addEventListener("command", function () {
-          this.rethread(window.gFolderDisplay.selectedMessages);
+          self.rethread(window.gFolderDisplay.selectedMessages);
         }, false);
         item.parentNode.insertBefore(myItem, item);
       }
@@ -133,6 +133,41 @@ MonkeyPatch.prototype = {
   },
 
   rethread: function (aMsgHdrs) {
-    Log.debug("Rethread");
+    Log.debug("Rethread", aMsgHdrs.length, "messages");
+    if (aMsgHdrs.length < 2)
+      return;
+
+    let id = "<rethread"+Date.now()+"@example.com>";
+
+    msgHdrsModifyRaw(aMsgHdrs, function (aRawString) {
+      return aRawString;
+      try {
+        // Find the separation between headers and body
+        let sep = /\r?\n\r?\n/.exec(aRawString);
+        if (!sep) {
+          Log.debug("Headers not found?!")
+          return;
+        }
+
+        let headers = aRawString.substring(0, sep.index);
+        let body = aRawString.substring(sep.index + 1, aRawString.length);
+
+        if (headers.match(/^References: /))
+          headers = headers.replace(/^References: /, "References: "+id+" ");
+        else
+          headers = headers + "\r\nReferences: "+id;
+
+        // Stolen from HeaderToolsLite
+        headers = headers.replace(/^From - .+\r\n/, "");
+        headers = headers.replace(/X-Mozilla-Status.+\r\n/, "");
+        headers = headers.replace(/X-Mozilla-Status2.+\r\n/, "");
+        headers = headers.replace(/X-Mozilla-Keys.+\r\n/, "");
+
+        return headers + body;
+      } catch (e) {
+        Log.debug(e);
+        dumpCallStack(e);
+      }
+    });
   }
 }
