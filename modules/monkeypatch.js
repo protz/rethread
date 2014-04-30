@@ -76,18 +76,18 @@ function MonkeyPatch(aWindow, aObj) {
 MonkeyPatch.prototype = {
 
   undo: function _MonkeyPatch_undo(aReason) {
-    let myItem = document.getElementById("rethread-menuitem");
+    let window = this._window;
+
+    let myItem = window.document.getElementById("rethread-menuitem");
     if (myItem)
-      myItem.parentNode.removeItem(myItem);
+      myItem.parentNode.removeChild(myItem);
   },
 
   apply: function () {
-    Log.debug("Applying\n\n");
-    dump("Applying\n\n");
-
+    let self = this;
     let window = this._window;
     let mailContext = window.document.getElementById("mailContext");
-    let oldFillMailContextMenu = window.fillMailContextMenu;
+
     let shouldShow = function () {
       let shouldShow_ = function (aNode) {
         if (aNode)
@@ -95,31 +95,44 @@ MonkeyPatch.prototype = {
         else
           return false;
       };
-      shouldShow_(document.popupNode);
+      return shouldShow_(window.document.popupNode);
     };
 
-    Log.debug("Applying2\n\n");
-
+    let oldFillMailContextMenu = window.fillMailContextMenu;
     window.fillMailContextMenu = function (event) {
-      Log.debug("Context menu!", document.popupNode, shouldShow());
-      oldFillMailContextMenu.call(this, event);
+      try {
+        oldFillMailContextMenu.call(this, event);
+      } catch (e) {
+        Log.debug("Error calling oldFillMailContextMenu", e);
+      }
+
       if (shouldShow()) {
         let item = window.document.getElementById("mailContext-ignoreThread");
         let myItem = window.document.createElement("menuitem");
         myItem.setAttribute("label", strings.get("rethread"));
         myItem.setAttribute("id", "rethread-menuitem");
         myItem.addEventListener("command", function () {
-          Log.debug("Clicked");
-          // Rethread.rethread(window.gFolderDisplay.selectedMessages);
+          this.rethread(window.gFolderDisplay.selectedMessages);
         }, false);
+        item.parentNode.insertBefore(myItem, item);
       }
     };
 
-    this._obj.rethread = function () {
-    };
+    let oldMailContextOnPopupHiding = window.mailContextOnPopupHiding;
+    window.mailContextOnPopupHiding = function (event) {
+      try {
+        oldMailContextOnPopupHiding.call(this, event);
+      } catch (e) {
+        Log.debug("Error calling oldMailContextOnPopupHiding", e);
+      }
 
-    this._obj.rethread = this;
+      self.undo();
+    };
 
     Log.debug("Monkey patch successfully applied.");
   },
+
+  rethread: function (aMsgHdrs) {
+    Log.debug("Rethread");
+  }
 }
