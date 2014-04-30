@@ -140,7 +140,6 @@ MonkeyPatch.prototype = {
     let id = "<rethread"+Date.now()+"@example.com>";
 
     msgHdrsModifyRaw(aMsgHdrs, function (aRawString) {
-      return aRawString;
       try {
         // Find the separation between headers and body
         let sep = /\r?\n\r?\n/.exec(aRawString);
